@@ -1,5 +1,5 @@
 intent: ingress
-flavor: mis-cors
+flavor: mis
 version: '0.1'
 description: Adds Ingress module with enhanced service naming to prevent collisions
 clouds:
@@ -627,7 +627,7 @@ iac:
   - versions.tf
 sample:
   kind: ingress
-  flavor: mis-cors
+  flavor: mis
   $schema: https://facets-cloud.github.io/facets-schemas/schemas/ingress/ingress.schema.json
   disabled: true
   version: '0.1'
