@@ -1,5 +1,5 @@
 intent: ingress
-flavor: mis
+flavor: mis-cors
 version: '0.1'
 description: Adds Ingress module with enhanced service naming to prevent collisions
 clouds:
@@ -422,6 +422,37 @@ spec:
                   title: Enable CORS
                   description: Enable Cross-Origin Resource Sharing (CORS) in an Ingress
                     rule
+                allow_origin:
+                  type: string
+                  title: Allow Origin
+                  description: Origins allowed for CORS requests (e.g., * for all
+                    origins or specific domain like https://example.com)
+                  x-ui-visible-if:
+                    field: spec.rules.{{this}}.cors.enable
+                    values:
+                    - true
+                  x-ui-placeholder: '*'
+                  default: '*'
+                allow_methods:
+                  type: string
+                  title: Allow Methods
+                  description: HTTP methods allowed for CORS requests
+                  x-ui-visible-if:
+                    field: spec.rules.{{this}}.cors.enable
+                    values:
+                    - true
+                  x-ui-placeholder: GET, PUT, POST, DELETE, PATCH, OPTIONS
+                  default: GET, PUT, POST, DELETE, PATCH, OPTIONS
+                allow_credentials:
+                  type: boolean
+                  title: Allow Credentials
+                  description: Allow credentials (cookies, authorization headers)
+                    in CORS requests
+                  x-ui-visible-if:
+                    field: spec.rules.{{this}}.cors.enable
+                    values:
+                    - true
+                  default: true
                 allow_headers:
                   title: Allow Headers
                   description: Controls which headers are accepted for CORS. Enter
@@ -596,7 +627,7 @@ iac:
   - versions.tf
 sample:
   kind: ingress
-  flavor: mis
+  flavor: mis-cors
   $schema: https://facets-cloud.github.io/facets-schemas/schemas/ingress/ingress.schema.json
   disabled: true
   version: '0.1'

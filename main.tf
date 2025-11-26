@@ -692,6 +692,18 @@ locals {
             {
               "nginx.ingress.kubernetes.io/enable-cors" = "true"
             },
+            # Add CORS allow_origin
+            {
+              "nginx.ingress.kubernetes.io/cors-allow-origin" = lookup(lookup(value, "cors", {}), "allow_origin", "*")
+            },
+            # Add CORS allow_methods
+            {
+              "nginx.ingress.kubernetes.io/cors-allow-methods" = lookup(lookup(value, "cors", {}), "allow_methods", "GET, PUT, POST, DELETE, PATCH, OPTIONS")
+            },
+            # Add CORS allow_credentials
+            {
+              "nginx.ingress.kubernetes.io/cors-allow-credentials" = tostring(lookup(lookup(value, "cors", {}), "allow_credentials", true))
+            },
             # Add CORS allow_headers using textarea format (newline-separated headers)
             lookup(lookup(value, "cors", {}), "allow_headers", null) != null &&
             trimspace(tostring(lookup(lookup(value, "cors", {}), "allow_headers", ""))) != "" ? {
