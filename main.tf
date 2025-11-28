@@ -164,6 +164,45 @@ locals {
     for key, value in local.annotations :
     key => value if !can(regex("^service\\.", key))
   }
+
+  # Annotations WITHOUT metadata - used when CORS is enabled in a rule
+  # When CORS is enabled, we want to ignore global metadata annotations and use only rule-specific ones
+  common_annotations_without_metadata = merge(
+    {
+      "nginx.ingress.kubernetes.io/use-regex" : "true"
+    },
+    # Skip the metadata annotations here (unlike common_annotations which includes them)
+    lookup(var.instance.spec, "force_ssl_redirection", false) ? {
+      "nginx.ingress.kubernetes.io/force-ssl-redirect" = "true"
+      "nginx.ingress.kubernetes.io/ssl-redirect"       = "true"
+      } : {
+      "nginx.ingress.kubernetes.io/force-ssl-redirect" = "false"
+      "nginx.ingress.kubernetes.io/ssl-redirect"       = "false"
+    },
+    {
+      "nginx.ingress.kubernetes.io/proxy-body-size" : "150m"
+      "nginx.ingress.kubernetes.io/proxy-connect-timeout" : "300"
+      "nginx.ingress.kubernetes.io/proxy-read-timeout" : "300"
+      "nginx.ingress.kubernetes.io/proxy-send-timeout" : "300"
+    },
+    local.more_set_headers_config,
+    local.conditional_set_headers_config
+  )
+
+  annotations_without_metadata = merge(
+    local.common_annotations_without_metadata,
+    var.environment.cloud == "AWS" ? local.aws_annotations : {},
+    var.environment.cloud == "GCP" ? local.gcp_annotations : {},
+    var.environment.cloud == "AZURE" ? local.azure_annotations : {},
+    local.additional_ingress_annotations_without_auth
+    # Note: No metadata annotations included here
+  )
+
+  nginx_annotations_without_metadata = {
+    for key, value in local.annotations_without_metadata :
+    key => value if !can(regex("^service\\.", key))
+  }
+
   service_annotations = {
     for key, value in local.annotations :
     key => value if can(regex("^service\\.", key))
@@ -536,7 +575,9 @@ locals {
         namespace = var.environment.namespace
         annotations = merge(
           lookup(lookup(value, "custom_tls", {}), "enabled", false) ? {} : local.cert_manager_common_annotations,
-          local.annotations,
+          # When CORS is enabled, use annotations WITHOUT global metadata (rule-specific annotations take over)
+          # When CORS is disabled, use annotations WITH global metadata
+          lookup(lookup(value, "cors", {}), "enable", false) == true ? local.annotations_without_metadata : local.annotations,
           lookup(value, "annotations", {}),
           lookup(var.instance.spec, "basicAuth", lookup(var.instance.spec, "basic_auth", false)) ? (lookup(value, "disable_auth", false) ? {} : local.additional_ingress_annotations_with_auth) : {},
           lookup(value, "grpc", false) ? {
@@ -656,7 +697,9 @@ locals {
         namespace = var.environment.namespace
         annotations = merge(
           lookup(lookup(value, "custom_tls", {}), "enabled", false) ? {} : local.cert_manager_common_annotations,
-          local.nginx_annotations,
+          # When CORS is enabled, use annotations WITHOUT global metadata (rule-specific annotations take over)
+          # When CORS is disabled, use annotations WITH global metadata
+          lookup(lookup(value, "cors", {}), "enable", false) == true ? local.nginx_annotations_without_metadata : local.nginx_annotations,
           lookup(value, "annotations", {}),
           lookup(var.instance.spec, "basicAuth", lookup(var.instance.spec, "basic_auth", false)) ? (lookup(value, "disable_auth", false) ? {} : local.additional_ingress_annotations_with_auth) : {},
           lookup(value, "grpc", false) ? {
